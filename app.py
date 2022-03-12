@@ -33,7 +33,14 @@ def home():
 
 @app.route('/answer')
 def answer():
-    return render_template('answer.html')
+    user = get_current_user()
+    db = connect_db()
+    cur = db.execute('select id,question_text, asked_id, expert_id from question where expert_id=?', [user['id']])
+    questions = cur.fetchall()
+    # if request.method == 'POST':
+    #     answer = request.form.get('answer')
+    #     db.execute('update question set answer_text=?',[answer])
+    return render_template('answer.html',questions=questions, user=user)
 
 
 @app.route('/ask', methods=['POST', 'GET'])
@@ -49,6 +56,19 @@ def ask():
                    question_text, 'Null', user['id'], expert_id])
         db.commit()
     return render_template('ask.html', experts=experts, user=user)
+
+
+@app.route('/answer_question/<int:question_id>', methods=['post', 'get'])
+def answer_question(question_id):
+    db = get_db()
+    cursor = db.execute(
+        'select id, question_text, answer_text, asked_id, expert_id from question where id=?', [question_id])
+    question = cursor.fetchone()
+    if request.method=='post':
+        answer_text=request.form.get('answer')
+        db.execute('update question set answer_text=? where id=?', [answer_text, question_id])  
+        db.commit()
+    return redirect(url_for('answer'))
 
 
 @app.route('/login', methods=['POST', 'GET'])
