@@ -1,5 +1,6 @@
+from distutils.log import error
 import sqlite3
-from flask import Flask, redirect, render_template, g, request, session, url_for
+from flask import Flask, flash, redirect, render_template, g, request, session, url_for
 
 from database import connect_db, get_db
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -28,19 +29,44 @@ def get_current_user():
 @app.route('/')
 def home():
     user = get_current_user()
-    return render_template('home.html', user=user)
+    if user:
+        db = connect_db()
+        cur = db.execute(
+            'select id, question_text, asked_id, expert_id from question where answer_text=?',
+            ['Null']
+        )
+        cur2 = db.execute(
+            'SELECT  user.name, question.answer_text, question.id FROM question INNER JOIN user ON question.asked_id = user.id where question.expert_id=?', [
+                user['id']]
+        )
+        # where question.expert_id=?', [user['id']]+
+        datas = cur.fetchall()
+        users = cur2.fetchall()
+    else:
+        return redirect(url_for('login'))
+
+    return render_template('home.html', users=users, user=user, datas=datas)
 
 
 @app.route('/answer')
 def answer():
     user = get_current_user()
     db = connect_db()
-    cur = db.execute('select id,question_text, asked_id, expert_id from question where expert_id=?', [user['id']])
-    questions = cur.fetchall()
+    cur = db.execute(
+        'select id, question_text, asked_id, expert_id from question where expert_id=?', [
+            user['id']]
+    )
+    # where expert_id=?',[user['id']]+
+    cur2 = db.execute(
+        'SELECT  user.name, question.answer_text, question.id, question_text, question.expert_id FROM question INNER JOIN user ON question.asked_id = user.id where question.expert_id=?', [
+            user['id']]
+    )
+    # where question.expert_id=?', [user['id']]+
+    questions = cur2.fetchall()
     # if request.method == 'POST':
     #     answer = request.form.get('answer')
     #     db.execute('update question set answer_text=?',[answer])
-    return render_template('answer.html',questions=questions, user=user)
+    return render_template('answer.html', questions=questions, user=user)
 
 
 @app.route('/ask', methods=['POST', 'GET'])
@@ -58,16 +84,19 @@ def ask():
     return render_template('ask.html', experts=experts, user=user)
 
 
-@app.route('/answer_question/<int:question_id>', methods=['post', 'get'])
+@app.route('/answer_question/<int:question_id>', methods=['POST', 'GET'])
 def answer_question(question_id):
     db = get_db()
     cursor = db.execute(
         'select id, question_text, answer_text, asked_id, expert_id from question where id=?', [question_id])
     question = cursor.fetchone()
-    if request.method=='post':
-        answer_text=request.form.get('answer')
-        db.execute('update question set answer_text=? where id=?', [answer_text, question_id])  
-        db.commit()
+    if request.method == 'POST':
+        if question['answer_text'] == 'Null':
+            answer_text = request.form.get('answer')
+            print(answer_text)
+            db.execute('update question set answer_text=? where id=?',
+                       [answer_text, question_id])
+            db.commit()
     return redirect(url_for('answer'))
 
 
@@ -103,9 +132,16 @@ def register():
         password = request_form.get('password')
         hashed_password = generate_password_hash(password, method='sha256')
         db = connect_db()
-        db.execute('insert into user (name, password, expert, admin) values (?,?,?,?)', [
-                   name, hashed_password, 0, 0])
-        db.commit()
+        cur = db.execute('select name from user')
+        username_list = []
+        for c in cur.fetchall():
+            username_list.append(c['name'])
+        if name not in username_list:
+            db.execute('insert into user (name, password, expert, admin) values (?,?,?,?)', [
+                name, hashed_password, 0, 0])
+            db.commit()
+        else:
+            flash('Username already exists', error)
     return render_template('register.html')
 
 
@@ -120,6 +156,15 @@ def users():
     cur = db.execute('select id, name, expert from user where admin =?', [0])
     users = cur.fetchall()
     return render_template('users.html', users=users)
+
+
+@app.route('/delete_user/<user_id>')
+def delete_user(user_id):
+    db = get_db()
+    db.execute(
+        'delete from user where id =?', [user_id])
+    db.commit()
+    return redirect(url_for('users'))
 
 
 @app.route('/change_status/<int:user_id>')

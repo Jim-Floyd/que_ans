@@ -57,6 +57,7 @@
             >
               <h4 class="list-group-item-heading">{{ user.name }}</h4>
             </a>
+            <a class="list-group-item-heading href="{{ url_for('delete_user',user_id=user.id) }}">❌</a>
             {% endfor %}
           </div>
         </div>
