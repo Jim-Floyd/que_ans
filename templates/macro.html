@@ -1,0 +1,17 @@
+{%macro links(user)%}
+<ul class="nav navbar-nav">
+  <li><a href="{{ url_for('home') }}">Home</a></li>
+  {%if not user%}
+  <li class="active"><a href="{{ url_for('login') }}">Login</a></li>
+  <li><a href="{{ url_for('register') }}">Register</a></li>
+  {%endif%} {%if user%} {%if not user.expert and not user.admin%}
+  <li><a href="{{ url_for('ask') }}">Ask Question</a></li>
+  {%endif%} {%if user.expert%}
+  <li><a href="{{ url_for('unanswered') }}">Answer Questions</a></li>
+  {%endif%} {%if user.admin%}
+  <li><a href="{{ url_for('users') }}">User Setup</a></li>
+  {%endif%}
+  <li><a href="{{ url_for('logout') }}">Logout</a></li>
+  {%endif%}
+</ul>
+{%endmacro%}

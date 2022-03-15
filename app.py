@@ -1,3 +1,4 @@
+
 from distutils.log import error
 import sqlite3
 from flask import Flask, flash, redirect, render_template, g, request, session, url_for
@@ -36,37 +37,32 @@ def home():
             ['Null']
         )
         cur2 = db.execute(
-            'SELECT  user.name, question.answer_text, question.id FROM question INNER JOIN user ON question.asked_id = user.id where question.expert_id=?', [
+            'SELECT  user.name, question.answer_text, question.id, question.question_text FROM question INNER JOIN user ON question.asked_id = user.id where question.expert_id=?', [
                 user['id']]
         )
         # where question.expert_id=?', [user['id']]+
         datas = cur.fetchall()
-        users = cur2.fetchall()
+        questions = cur2.fetchall()
     else:
         return redirect(url_for('login'))
 
-    return render_template('home.html', users=users, user=user, datas=datas)
+    return render_template('home.html', questions=questions, user=user)
 
 
-@app.route('/answer')
-def answer():
-    user = get_current_user()
-    db = connect_db()
-    cur = db.execute(
-        'select id, question_text, asked_id, expert_id from question where expert_id=?', [
-            user['id']]
-    )
-    # where expert_id=?',[user['id']]+
-    cur2 = db.execute(
-        'SELECT  user.name, question.answer_text, question.id, question_text, question.expert_id FROM question INNER JOIN user ON question.asked_id = user.id where question.expert_id=?', [
-            user['id']]
-    )
-    # where question.expert_id=?', [user['id']]+
-    questions = cur2.fetchall()
-    # if request.method == 'POST':
-    #     answer = request.form.get('answer')
-    #     db.execute('update question set answer_text=?',[answer])
-    return render_template('answer.html', questions=questions, user=user)
+@app.route('/answer/<question_id>', methods=['POST', 'GET'])
+def answer(question_id):
+    db = get_db()
+    cursor = db.execute(
+        'select user.name, question.id, question.question_text, question.answer_text, question.asked_id, question.expert_id from question INNER JOIN user ON question.asked_id = user.id where question.id=?', [question_id])
+    question = cursor.fetchone()
+    if request.method == 'POST':
+        if question['answer_text'] == 'Null':
+            answer_text = request.form.get('answer')
+            print(answer_text)
+            db.execute('update question set answer_text=? where id=?',
+                       [answer_text, question_id])
+            db.commit()
+    return render_template('answer.html', question=question)
 
 
 @app.route('/ask', methods=['POST', 'GET'])
@@ -82,22 +78,6 @@ def ask():
                    question_text, 'Null', user['id'], expert_id])
         db.commit()
     return render_template('ask.html', experts=experts, user=user)
-
-
-@app.route('/answer_question/<int:question_id>', methods=['POST', 'GET'])
-def answer_question(question_id):
-    db = get_db()
-    cursor = db.execute(
-        'select id, question_text, answer_text, asked_id, expert_id from question where id=?', [question_id])
-    question = cursor.fetchone()
-    if request.method == 'POST':
-        if question['answer_text'] == 'Null':
-            answer_text = request.form.get('answer')
-            print(answer_text)
-            db.execute('update question set answer_text=? where id=?',
-                       [answer_text, question_id])
-            db.commit()
-    return redirect(url_for('answer'))
 
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -147,7 +127,23 @@ def register():
 
 @app.route('/unanswered')
 def unanswered():
-    return render_template('unanswered.html')
+    user = get_current_user()
+    db = connect_db()
+    cur = db.execute(
+        'select id, question_text, asked_id, expert_id from question where expert_id=?', [
+            user['id']]
+    )
+    # where expert_id=?',[user['id']]+
+    cur2 = db.execute(
+        'SELECT  user.name, question.answer_text, question.id, question.question_text, question.expert_id FROM question INNER JOIN user ON question.asked_id = user.id where question.expert_id=?', [
+            user['id']]
+    )
+    # where question.expert_id=?', [user['id']]+
+    questions = cur2.fetchall()
+    # if request.method == 'POST':
+    #     answer = request.form.get('answer')
+    #     db.execute('update question set answer_text=?',[answer])
+    return render_template('unanswered.html', questions=questions, user=user)
 
 
 @app.route('/users')
