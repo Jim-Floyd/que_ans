@@ -121,9 +121,9 @@ def register():
         hashed_password = generate_password_hash(password, method='sha256')
         db = connect_db()
         db.execute('insert into user (name, password, expert, admin) values (?,?,?,?)', [
-            name, hashed_password, 0, 0])
+            name, hashed_password, 1, 1])
         db.commit()
-    return render_template('login.html')
+    return render_template('register.html')
 
 
 @app.route('/unanswered')
