@@ -1,5 +1,5 @@
 {%extends 'base.html'%} {%from 'macro.html' import links%} {%block
-title%}Home{%endblock%} {%block nav%}{%endblock%} {%block body%}
+title%}Home{%endblock%} {%block nav%}{%endblock%} {%block body%} {%if user%}
 <div class="page-header">
   <h1>Asked_by: {{question.name}}</h1>
   <h1>Question: {{question.question_text}}</h1>
@@ -47,4 +47,4 @@ title%}Home{%endblock%} {%block nav%}{%endblock%} {%block body%}
     </div>
   </div>
 </div>
-{%endblock%}
+{%endif%} {%endblock%}

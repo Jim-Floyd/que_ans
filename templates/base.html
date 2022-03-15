@@ -31,6 +31,10 @@
         <!--/.nav-collapse -->
       </div>
     </nav>
+    {% with messages = get_flashed_messages() %} {%if messages%} {% for msg in
+    messages %}
+    <h1>{{msg}}</h1>
+    {%endfor%}{%endif%}{%endwith%}
     <div class="container theme-showcase" role="main">
       {%block body%}{%endblock%}
     </div>

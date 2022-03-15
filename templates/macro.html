@@ -3,7 +3,7 @@
   <li><a href="{{ url_for('home') }}">Home</a></li>
   {%if not user%}
   <li class="active"><a href="{{ url_for('login') }}">Login</a></li>
-  <li><a href="{{ url_for('register') }}">Register</a></li>
+  <!-- <li><a href="{{ url_for('register') }}">Register</a></li> -->
   {%endif%} {%if user%} {%if not user.expert and not user.admin%}
   <li><a href="{{ url_for('ask') }}">Ask Question</a></li>
   {%endif%} {%if user.expert%}

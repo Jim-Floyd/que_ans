@@ -51,6 +51,7 @@ def home():
 
 @app.route('/answer/<question_id>', methods=['POST', 'GET'])
 def answer(question_id):
+    user = get_current_user()
     db = get_db()
     cursor = db.execute(
         'select user.name, question.id, question.question_text, question.answer_text, question.asked_id, question.expert_id from question INNER JOIN user ON question.asked_id = user.id where question.id=?', [question_id])
@@ -62,7 +63,7 @@ def answer(question_id):
             db.execute('update question set answer_text=? where id=?',
                        [answer_text, question_id])
             db.commit()
-    return render_template('answer.html', question=question)
+    return render_template('answer.html', question=question, user=user)
 
 
 @app.route('/ask', methods=['POST', 'GET'])
@@ -106,23 +107,23 @@ def question():
 
 @app.route('/register', methods=['POST', 'GET'])
 def register():
+    db = connect_db()
     if request.method == "POST":
         request_form = request.form
         name = request_form.get('name')
+
+        check = db.execute('select id from user where name=?', [name])
+        check_name = check.fetchone()
+        if check_name:
+            flash('Username already exists')
+            return render_template('register.html', error='Username already exists')
         password = request_form.get('password')
         hashed_password = generate_password_hash(password, method='sha256')
         db = connect_db()
-        cur = db.execute('select name from user')
-        username_list = []
-        for c in cur.fetchall():
-            username_list.append(c['name'])
-        if name not in username_list:
-            db.execute('insert into user (name, password, expert, admin) values (?,?,?,?)', [
-                name, hashed_password, 0, 0])
-            db.commit()
-        else:
-            flash('Username already exists', error)
-    return render_template('register.html')
+        db.execute('insert into user (name, password, expert, admin) values (?,?,?,?)', [
+            name, hashed_password, 0, 0])
+        db.commit()
+    return render_template('login.html')
 
 
 @app.route('/unanswered')
@@ -148,10 +149,11 @@ def unanswered():
 
 @app.route('/users')
 def users():
+    user = get_current_user()
     db = get_db()
     cur = db.execute('select id, name, expert from user where admin =?', [0])
     users = cur.fetchall()
-    return render_template('users.html', users=users)
+    return render_template('users.html', users=users, user=user)
 
 
 @app.route('/delete_user/<user_id>')
